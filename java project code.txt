@@ -1,0 +1,513 @@
+database class :-
+
+package com.pij;
+
+import java.sql.*;
+
+public class DatabaseClass {
+
+	public Connection c;
+	private Statement statement;
+	private UiClass ui;
+
+	// public String q = "select * from students where name='amar mane'";
+
+	public void connectToDatabse() {
+		try {
+
+			String url = "jdbc:oracle:thin:@localhost:1521:XE";
+			Class.forName("oracle.jdbc.driver.OracleDriver");
+			c = DriverManager.getConnection(url, "system", "abhishek");
+			statement = c.createStatement();
+		} catch (Exception e) {
+			System.out.println("exception : " + e.getMessage().toString());
+		}
+
+	}
+
+	public void closeDatabseConnection() {
+		try {
+			c.close();
+		} catch (Exception e) {
+			System.out.println("connection close exception : "
+					+ e.getMessage().toString());
+		}
+	}
+
+	public int loginQuery(String q) {
+		int rollNo = 1000;
+		int next = 2;
+		try {
+			ResultSet rs = statement.executeQuery(q);
+			if (rs.next()) {
+				// System.out.println(rs.getString(1)+" "+rs.getString(2)+" "+rs.getString(3));
+				rollNo = rs.getInt(1);
+			}
+			// System.out.println("roll no : "+rollNo);
+			if (rollNo == 0) {
+				return 0;
+			} else if (rollNo > 0 && rollNo != 1000) {
+				return rollNo;
+			} else {
+				return 1000;
+			}
+
+		} catch (Exception e) {
+			System.out.println("execute Query Exception : "
+					+ e.getMessage().toString());
+			return 2;
+		}
+
+	}
+
+	public String[] getNotifications() {
+		connectToDatabse();
+
+		try {
+			ResultSet rs = statement.executeQuery("Select * from notify");
+			int i = 0;
+			String[] sub = new String[10];
+			while (rs.next()) {
+				sub[i] = rs.getString(1);
+				i++;
+			}
+
+			closeDatabseConnection();
+
+			return sub;
+
+		} catch (Exception e) {
+			String[] sub = {};
+			e.printStackTrace();
+			return sub;
+		}
+	}
+
+	public void uploadNewSubmission(String name) {
+		connectToDatabse();
+		try {
+			statement.executeQuery("insert into notify values('" + name
+					+ "','12-11-2017')");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+}
+
+
+ui class : - 
+
+package com.pij;
+
+import java.awt.EventQueue;
+
+import javax.swing.JFrame;
+
+import java.awt.CardLayout;
+
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JLabel;
+import javax.swing.JButton;
+
+import java.awt.event.ActionListener;
+import java.awt.event.ActionEvent;
+
+import javax.swing.BoxLayout;
+
+import java.awt.Component;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.TextField;
+import java.sql.ResultSet;
+
+import com.jgoodies.forms.layout.FormLayout;
+import com.jgoodies.forms.layout.ColumnSpec;
+import com.jgoodies.forms.layout.RowSpec;
+import com.jgoodies.forms.factories.FormFactory;
+
+import javax.swing.JList;
+import javax.swing.JTextField;
+import javax.swing.JPasswordField;
+
+public class UiClass {
+
+	private JFrame frame;
+	private JTextField userID;
+	private JTextField password;
+	private JPanel LoginPane;
+
+	/**
+	 * Launch the application.
+	 */
+	public static void main(String[] args) {
+		EventQueue.invokeLater(new Runnable() {
+			public void run() {
+				try {
+					UiClass window = new UiClass();
+					window.frame.setVisible(true);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		});
+	}
+
+	/**
+	 * Create the application.
+	 */
+	public UiClass() {
+		initialize();
+	}
+
+	/**
+	 * Initialize the contents of the frame.
+	 */
+	private void initialize() {
+		frame = new JFrame();
+		frame.setBounds(200, 200, 450, 352);
+		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		frame.getContentPane().setLayout(new CardLayout(0, 0));
+
+		LoginPane = new JPanel();
+		frame.getContentPane().add(LoginPane, "name_1131817280221126");
+		LoginPane.setLayout(null);
+		LoginPane.setVisible(true);
+
+		JLabel lblUserId = new JLabel("Roll No");
+		lblUserId.setFont(new Font("SansSerif", Font.PLAIN, 20));
+		lblUserId.setBounds(12, 45, 116, 50);
+		LoginPane.add(lblUserId);
+
+		JLabel lblPassword = new JLabel("Password");
+		lblPassword.setFont(new Font("SansSerif", Font.PLAIN, 20));
+		lblPassword.setBounds(12, 108, 116, 50);
+		LoginPane.add(lblPassword);
+
+		userID = new JTextField();
+		userID.setFont(new Font("SansSerif", Font.PLAIN, 18));
+		userID.setColumns(10);
+		userID.setBounds(167, 58, 240, 33);
+		LoginPane.add(userID);
+
+		JButton loginbtn = new JButton("LOGIN");
+		loginbtn.setFont(new Font("SansSerif", Font.PLAIN, 20));
+		loginbtn.setBounds(148, 204, 137, 50);
+		LoginPane.add(loginbtn);
+
+		password = new JTextField();
+		password.setFont(new Font("SansSerif", Font.PLAIN, 18));
+		password.setBounds(167, 120, 240, 33);
+		LoginPane.add(password);
+		password.setColumns(10);
+
+		loginbtn.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+
+				String rollno = userID.getText().toString();
+				String passwordStr = password.getText().toString();
+				String q = "select * from students where rollno='" + rollno
+						+ "' and password='" + passwordStr + "'";
+
+				DatabaseClass dc = new DatabaseClass();
+				dc.connectToDatabse();
+				int next = dc.loginQuery(q);
+				dc.closeDatabseConnection();
+				if (next == 0) {
+					goToTeacherPane();
+				} else if (next > 0 && next < 1000) {
+					goToStudentPane(next);
+				} else if (next == 1000) {
+
+					JOptionPane.showMessageDialog(null,
+							"Invalid roll no or password");
+
+					/*
+					 * JFrame dialog = new JFrame("Unable to Login !");
+					 * dialog.setBounds(350, 350, 400, 200);
+					 * dialog.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+					 * dialog.setVisible(true);
+					 */
+				}
+			}
+		});
+	}
+
+	public void goToStudentPane(int rollNo) {
+		frame.dispose();
+		StudentWindow sw = new StudentWindow();
+		sw.createStudentFile(rollNo);
+		sw.initialize();
+	}
+
+	public void goToTeacherPane() {
+		frame.dispose();
+		TeacherWindow tw = new TeacherWindow();
+		tw.initialize();
+	}
+}
+
+student class : -
+
+package com.pij;
+
+import java.io.*;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+
+import javax.swing.JFrame;
+
+import java.awt.CardLayout;
+import java.util.Date;
+
+import javax.swing.DefaultListModel;
+import javax.swing.JButton;
+import javax.swing.JFileChooser;
+import javax.swing.JPanel;
+import javax.swing.JLabel;
+
+import java.awt.Font;
+
+import javax.swing.SwingConstants;
+
+import java.awt.event.ActionListener;
+import java.awt.event.ActionEvent;
+import java.awt.Color;
+
+import javax.swing.JSeparator;
+import javax.swing.JList;
+
+public class StudentWindow {
+	public StudentWindow() {
+	}
+
+	private JFrame frame;
+	private int rollNo;
+	private JList list;
+	private DefaultListModel dlm;
+	private DefaultListModel uList;
+
+	/**
+	 * @wbp.parser.entryPoint
+	 */
+	public void initialize() {
+
+		frame = new JFrame("Submit Assignments");
+		frame.setBounds(200, 200, 800, 600);
+		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		frame.getContentPane().setLayout(null);
+
+		JLabel lblUploadFile = new JLabel("Upload File");
+		lblUploadFile.setBackground(Color.WHITE);
+		lblUploadFile.setHorizontalAlignment(SwingConstants.LEFT);
+		lblUploadFile.setFont(new Font("SansSerif", Font.PLAIN, 22));
+		lblUploadFile.setBounds(52, 12, 175, 38);
+		frame.getContentPane().add(lblUploadFile);
+
+		JButton btnB = new JButton("Browse");
+		btnB.setFont(new Font("SansSerif", Font.PLAIN, 18));
+		btnB.setBounds(642, 13, 128, 38);
+		frame.getContentPane().add(btnB);
+
+		JSeparator separator = new JSeparator();
+		separator.setBounds(12, 64, 758, 2);
+		frame.getContentPane().add(separator);
+
+		dlm = new DefaultListModel();
+
+		DatabaseClass db = new DatabaseClass();
+		String[] sub = db.getNotifications();
+		for (int i = 0; i < sub.length; i++) {
+			dlm.addElement(sub[i]);
+		}
+
+		list = new JList(dlm);
+		list.setFont(new Font("SansSerif", Font.PLAIN, 18));
+		list.setBounds(12, 101, 758, 202);
+		frame.getContentPane().add(list);
+
+		JLabel lblPreviouslyUploaded = new JLabel("new submissions ");
+		lblPreviouslyUploaded.setHorizontalAlignment(SwingConstants.LEFT);
+		lblPreviouslyUploaded.setFont(new Font("SansSerif", Font.PLAIN, 18));
+		lblPreviouslyUploaded.setBounds(52, 60, 202, 46);
+		frame.getContentPane().add(lblPreviouslyUploaded);
+
+		JLabel lblUploadedFiles = new JLabel("uploaded files");
+		lblUploadedFiles.setFont(new Font("SansSerif", Font.PLAIN, 18));
+		lblUploadedFiles.setBounds(52, 320, 128, 29);
+		frame.getContentPane().add(lblUploadedFiles);
+
+		uList = new DefaultListModel();
+
+		JList list_1 = new JList(uList);
+		list_1.setFont(new Font("SansSerif", Font.PLAIN, 18));
+		list_1.setBounds(12, 362, 758, 178);
+		frame.getContentPane().add(list_1);
+		frame.setVisible(true);
+
+		btnB.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				JFileChooser fc = new JFileChooser(new File("C:\\"));
+				fc.setDialogTitle("Select a File");
+				fc.showSaveDialog(null);
+				File selectedFile = fc.getSelectedFile();
+				String selectedFilePath = selectedFile.getAbsolutePath();
+
+				InputStream in = null;
+				OutputStream out = null;
+				try {
+					File source = new File(selectedFilePath);
+					File dest = new File(
+							"C:\\Users\\hp\\Desktop\\SubmissionProject\\students\\Roll_No_"
+									+ rollNo + "\\" + selectedFile.getName());
+					in = new FileInputStream(source);
+					out = new FileOutputStream(dest);
+
+					byte[] buffer = new byte[1024];
+
+					int length;
+					while ((length = in.read(buffer)) > 0) {
+						out.write(buffer, 0, length);
+					}
+
+					if (in != null)
+						in.close();
+					if (out != null)
+						out.close();
+
+					System.out.println("file copied ... ");
+
+					DateFormat dataFormat = new SimpleDateFormat("dd/MM/yyyy");
+					Date date = new Date();
+
+					String s = new String(selectedFile.getName());
+
+					uList.addElement(dataFormat.format(date) + "   "
+							+ selectedFile.getName());
+
+				} catch (Exception e) {
+					System.out.println("file copy exception : "
+							+ e.getMessage().toString());
+				}
+			}
+		});
+
+	}
+
+	public void createStudentFile(int rollNo) {
+		this.rollNo = rollNo;
+		boolean f = new File(
+				"C:\\Users\\hp\\Desktop\\SubmissionProject\\students\\Roll_No_"
+						+ rollNo).mkdir();
+	}
+
+}
+  
+
+teacher class : -
+
+package com.pij;
+
+import java.awt.EventQueue;
+
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+
+import java.awt.BorderLayout;
+
+import javax.swing.DefaultListCellRenderer;
+import javax.swing.DefaultListModel;
+import javax.swing.GroupLayout;
+import javax.swing.GroupLayout.Alignment;
+import javax.swing.JButton;
+import javax.swing.JTextField;
+import javax.swing.LayoutStyle.ComponentPlacement;
+
+import java.awt.Font;
+
+import javax.swing.JLabel;
+import javax.swing.JSeparator;
+import javax.swing.JList;
+
+import java.awt.event.ActionListener;
+import java.awt.event.ActionEvent;
+
+import javax.swing.SwingConstants;
+
+import java.awt.Color;
+
+import javax.swing.ListSelectionModel;
+
+public class TeacherWindow {
+	public TeacherWindow() {
+	}
+
+	private JFrame frame;
+	private JTextField textField;
+	private DefaultListModel dlm;
+
+	/**
+	 * @wbp.parser.entryPoint
+	 */
+	public void initialize() {
+		frame = new JFrame("Post New Assignments");
+		frame.getContentPane().setFont(new Font("SansSerif", Font.PLAIN, 18));
+		frame.setBounds(200, 200, 800, 600);
+		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		frame.getContentPane().setLayout(null);
+
+		JButton btnAddNewAssignment = new JButton("Add");
+		btnAddNewAssignment.setFont(new Font("SansSerif", Font.PLAIN, 18));
+		btnAddNewAssignment.setBounds(685, 55, 85, 48);
+		frame.getContentPane().add(btnAddNewAssignment);
+
+		/** assignment list */
+		dlm = new DefaultListModel();
+
+		JList list = new JList(dlm);
+		list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+		list.setFont(new Font("SansSerif", Font.PLAIN, 18));
+		list.setBounds(12, 183, 758, 357);
+		frame.getContentPane().add(list);
+		frame.setVisible(true);
+
+		JSeparator separator_1 = new JSeparator();
+		separator_1.setBounds(12, 116, 758, 2);
+		frame.getContentPane().add(separator_1);
+
+		JLabel lblAddAssignments = new JLabel("Add Assignments");
+		lblAddAssignments.setBackground(Color.WHITE);
+		lblAddAssignments.setHorizontalAlignment(SwingConstants.CENTER);
+		lblAddAssignments.setFont(new Font("SansSerif", Font.PLAIN, 18));
+		lblAddAssignments.setBounds(12, 13, 758, 29);
+		frame.getContentPane().add(lblAddAssignments);
+
+		JLabel lblName = new JLabel("Name");
+		lblName.setFont(new Font("SansSerif", Font.PLAIN, 18));
+		lblName.setBounds(22, 61, 72, 36);
+		frame.getContentPane().add(lblName);
+
+		textField = new JTextField();
+		textField.setFont(new Font("SansSerif", Font.PLAIN, 18));
+		textField.setBounds(106, 63, 567, 37);
+		frame.getContentPane().add(textField);
+		textField.setColumns(10);
+
+		JLabel lblPreviouslyAdded = new JLabel("Previously Added");
+		lblPreviouslyAdded.setBackground(Color.WHITE);
+		lblPreviouslyAdded.setHorizontalAlignment(SwingConstants.CENTER);
+		lblPreviouslyAdded.setFont(new Font("SansSerif", Font.PLAIN, 18));
+		lblPreviouslyAdded.setBounds(22, 135, 748, 36);
+		frame.getContentPane().add(lblPreviouslyAdded);
+
+		btnAddNewAssignment.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				String name = textField.getText().toString();
+				DatabaseClass db = new DatabaseClass();
+				db.uploadNewSubmission(name);
+				db.closeDatabseConnection();
+				dlm.addElement(name);
+			}
+		});
+	}
+}
